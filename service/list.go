@@ -85,19 +85,26 @@ func List(baseCoin string, filter []string) (*ListView, error) {
 			Locked: balance.Locked,
 		}
 
+		if balance.Asset == baseCoin {
+			list.Coins = append(list.Coins, coinInfo)
+			continue
+		}
+
 		exchangeSymbol := balance.Asset + baseCoin
 		lastPrice, err := LastPrice(exchangeSymbol)
 		if err != nil {
 			coinInfo.Price = -1
-			fmt.Printf("Error: %s\n", err.Error())
+			fmt.Printf("[%s] Error: %s\n", coinInfo.Asset, err.Error())
+			continue
 		} else {
 			coinInfo.Price = lastPrice
 		}
 
 		lastTrade, err := LastTrade(exchangeSymbol)
 		if err != nil {
-			fmt.Printf("Error: %s\n", err.Error())
 			coinInfo.LastTraded = -1
+			fmt.Printf("[%s] Error: %s\n", coinInfo.Asset, err.Error())
+			continue
 		} else {
 			coinInfo.LastTraded = lastTrade
 		}
