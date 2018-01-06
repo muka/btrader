@@ -1,6 +1,6 @@
 package main
 
-import "github.com/muka/binance-cli/cmd"
+import "github.com/muka/btrader/cmd"
 
 func main() {
 	cmd.Execute()

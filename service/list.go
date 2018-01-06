@@ -19,8 +19,31 @@ func getClient() *binance.Binance {
 	return bclient
 }
 
+//ListView contains an overview of coin status
+type ListView struct {
+	BaseCoin       string
+	USDUnitValue   float64
+	USDTotalValue  float64
+	USDDeltaValue  float64
+	USDTradedValue float64
+	Coins          []CoinInfo
+}
+
+//CoinInfo describe the state of a coin
+type CoinInfo struct {
+	Asset          string
+	Free           float64
+	Locked         float64
+	Price          float64
+	LastTraded     float64
+	Delta          float64
+	USDValue       float64
+	USDDeltaValue  float64
+	USDTradedValue float64
+}
+
 //List account status
-func List(baseCoin string, filter []string) error {
+func List(baseCoin string, filter []string) (*ListView, error) {
 
 	symbolFilter := make(map[string]bool)
 	if len(filter) > 0 {
@@ -29,20 +52,20 @@ func List(baseCoin string, filter []string) error {
 		}
 	}
 
-	client := getClient()
-
-	usdChange, err := GetUSD(baseCoin)
-	if err != nil {
-		return err
+	list := ListView{
+		Coins: make([]CoinInfo, 0),
 	}
 
-	fmt.Printf("Last %s price: %0.8f", baseCoin, usdChange)
-
-	var total float64
+	client := getClient()
+	usdChange, err := GetUSD(baseCoin)
+	if err != nil {
+		return nil, err
+	}
+	list.USDUnitValue = usdChange
 
 	positions, err := client.GetPositions()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, balance := range positions {
 
@@ -56,56 +79,50 @@ func List(baseCoin string, filter []string) error {
 			continue
 		}
 
-		availStrf := "%.4f%s\t"
-		if balance.Free < 1 { //BTC
-			availStrf = "%.8f %s\t"
-		}
-		availStr := fmt.Sprintf(availStrf, balance.Free, balance.Asset)
-
-		if balance.Asset == baseCoin {
-			fmt.Println(availStr)
-			continue
+		coinInfo := CoinInfo{
+			Asset:  balance.Asset,
+			Free:   balance.Free,
+			Locked: balance.Locked,
 		}
 
 		exchangeSymbol := balance.Asset + baseCoin
-
-		lockedStr := ""
-		if balance.Locked > 0 {
-			lockedStr = fmt.Sprintf("\tLocked: %.8f", balance.Locked)
-		}
-
-		lastPriceStr := ""
 		lastPrice, err := LastPrice(exchangeSymbol)
 		if err != nil {
+			coinInfo.Price = -1
 			fmt.Printf("Error: %s\n", err.Error())
 		} else {
-			lastPriceStr = fmt.Sprintf("\t\tPrice: %.8f %s", lastPrice, baseCoin)
+			coinInfo.Price = lastPrice
 		}
 
-		lastTradeStr := ""
 		lastTrade, err := LastTrade(exchangeSymbol)
 		if err != nil {
 			fmt.Printf("Error: %s\n", err.Error())
+			coinInfo.LastTraded = -1
 		} else {
-			if lastTrade > -1 {
-				lastTradeStr = fmt.Sprintf("\tBought: %.8f %s", lastTrade, baseCoin)
-			} else {
-				lastTradeStr = "\tBought:           "
-			}
-
+			coinInfo.LastTraded = lastTrade
 		}
 
-		deltaStr := fmt.Sprintf("\tDelta: %.8f", (lastPrice - lastTrade))
+		if balance.Asset == baseCoin {
+			continue
+		}
 
-		usdVal := ((lastPrice * balance.Free) * usdChange)
-		total += usdVal
+		if lastTrade > -1 {
+			coinInfo.Delta = (lastPrice - lastTrade)
+			coinInfo.USDDeltaValue = coinInfo.Delta * coinInfo.Free * usdChange
+			list.USDDeltaValue += coinInfo.USDDeltaValue
+		}
 
-		valueStr := fmt.Sprintf("\tValue: %.8f", usdVal)
+		if coinInfo.LastTraded > -1 {
+			coinInfo.USDTradedValue = ((coinInfo.LastTraded * balance.Free) * usdChange)
+		}
 
-		fmt.Printf("%s%s%s%s%s%s\n", availStr, deltaStr, lockedStr, lastPriceStr, lastTradeStr, valueStr)
+		coinInfo.USDValue = ((lastPrice * balance.Free) * usdChange)
+
+		list.USDTotalValue += coinInfo.USDValue
+		list.USDTradedValue += coinInfo.USDTradedValue
+
+		list.Coins = append(list.Coins, coinInfo)
 	}
 
-	fmt.Printf("---\nTotal value %.2f\n", total)
-
-	return nil
+	return &list, nil
 }
