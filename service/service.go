@@ -18,19 +18,32 @@ func LastPrice(symbol string) (float64, error) {
 }
 
 //LastTrade return the last price bought
-func LastTrade(symbol string) (float64, error) {
+func LastTrade(symbol string) ([]binance.Trade, error) {
+	t := []binance.Trade{}
 	client := getClient()
 	res, err := client.GetTrades(symbol)
 	if err != nil {
-		return -1, err
+		return t, err
 	}
 	if len(res) == 0 {
-		return -1, nil
+		return t, nil
 	}
-	return res[0].Price, nil
+	return res, nil
 }
 
 //GetUSD return the current price in USDT of a coin
 func GetUSD(baseCoin string) (float64, error) {
 	return LastPrice(baseCoin + "USDT")
+}
+
+//GetChangeStats return 24h stats for a coin
+func GetChangeStats(symbol string) (binance.ChangeStats, error) {
+
+	client := getClient()
+
+	q := binance.SymbolQuery{
+		Symbol: symbol,
+	}
+
+	return client.Get24Hr(q)
 }

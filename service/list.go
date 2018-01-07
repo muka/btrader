@@ -35,19 +35,31 @@ type CoinInfo struct {
 	Free           float64
 	Locked         float64
 	Price          float64
-	LastTraded     float64
+	AvgTraded      float64
 	Delta          float64
 	USDValue       float64
 	USDDeltaValue  float64
 	USDTradedValue float64
+	Change         binance.ChangeStats
+	Trades         []binance.Trade
+}
+
+//ListFilter filter for the list view
+type ListFilter struct {
+	Asset         []string
+	USDValueLimit float64
 }
 
 //List account status
-func List(baseCoin string, filter []string) (*ListView, error) {
+func List(baseCoin string, filter ListFilter) (*ListView, error) {
+
+	if filter.USDValueLimit == 0 {
+		filter.USDValueLimit = .5
+	}
 
 	symbolFilter := make(map[string]bool)
-	if len(filter) > 0 {
-		for _, f := range filter {
+	if len(filter.Asset) > 0 {
+		for _, f := range filter.Asset {
 			symbolFilter[strings.ToUpper(f)] = true
 		}
 	}
@@ -62,6 +74,16 @@ func List(baseCoin string, filter []string) (*ListView, error) {
 		return nil, err
 	}
 	list.USDUnitValue = usdChange
+
+	pricesList, err := client.GetAllPrices()
+	if err != nil {
+		return nil, err
+	}
+
+	prices := make(map[string]float64)
+	for _, p := range pricesList {
+		prices[p.Symbol] = p.Price
+	}
 
 	positions, err := client.GetPositions()
 	if err != nil {
@@ -91,39 +113,55 @@ func List(baseCoin string, filter []string) (*ListView, error) {
 		}
 
 		exchangeSymbol := balance.Asset + baseCoin
-		lastPrice, err := LastPrice(exchangeSymbol)
+
+		change, err := GetChangeStats(exchangeSymbol)
 		if err != nil {
+			return nil, err
+		}
+		coinInfo.Change = change
+
+		lastPrice, ok := prices[exchangeSymbol]
+		if !ok {
 			coinInfo.Price = -1
-			fmt.Printf("[%s] Error: %s\n", coinInfo.Asset, err.Error())
 			continue
 		} else {
 			coinInfo.Price = lastPrice
 		}
 
-		lastTrade, err := LastTrade(exchangeSymbol)
-		if err != nil {
-			coinInfo.LastTraded = -1
+		coinInfo.USDValue = ((lastPrice * balance.Free) + (lastPrice * balance.Locked)) * usdChange
+
+		if coinInfo.USDValue < filter.USDValueLimit {
+			continue
+		}
+
+		trades, err := LastTrade(exchangeSymbol)
+		if err != nil || len(trades) == 0 {
+			coinInfo.AvgTraded = -1
 			fmt.Printf("[%s] Error: %s\n", coinInfo.Asset, err.Error())
 			continue
 		} else {
-			coinInfo.LastTraded = lastTrade
+			var avgPrice float64
+			for _, t := range trades {
+				if t.IsBuyer {
+					avgPrice += t.Price
+				}
+			}
+			coinInfo.AvgTraded = avgPrice / float64(len(trades))
 		}
 
 		if balance.Asset == baseCoin {
 			continue
 		}
 
-		if lastTrade > -1 {
-			coinInfo.Delta = (lastPrice - lastTrade)
-			coinInfo.USDDeltaValue = coinInfo.Delta * coinInfo.Free * usdChange
+		if coinInfo.AvgTraded > -1 {
+			coinInfo.Delta = (lastPrice - coinInfo.AvgTraded)
+			coinInfo.USDDeltaValue = ((coinInfo.Delta * coinInfo.Free) + (coinInfo.Delta * coinInfo.Locked)) * usdChange
 			list.USDDeltaValue += coinInfo.USDDeltaValue
 		}
 
-		if coinInfo.LastTraded > -1 {
-			coinInfo.USDTradedValue = ((coinInfo.LastTraded * balance.Free) * usdChange)
+		if coinInfo.AvgTraded > -1 {
+			coinInfo.USDTradedValue = ((coinInfo.AvgTraded * balance.Free) + (coinInfo.AvgTraded * balance.Locked)) * usdChange
 		}
-
-		coinInfo.USDValue = ((lastPrice * balance.Free) * usdChange)
 
 		list.USDTotalValue += coinInfo.USDValue
 		list.USDTradedValue += coinInfo.USDTradedValue

@@ -7,8 +7,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var baseCoin string
-
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
@@ -16,7 +14,7 @@ var listCmd = &cobra.Command{
 	Long: `list`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		list, err := service.List(baseCoin, args)
+		list, err := service.List(baseCoin, service.ListFilter{Asset: args})
 		if err != nil {
 			fmt.Println(err.Error())
 			os.Exit(1)
@@ -24,7 +22,7 @@ var listCmd = &cobra.Command{
 
 		fmt.Printf("Last %s price: %.8f\n", baseCoin, list.USDUnitValue)
 
-		fmt.Println("---\nCoin\t\t\tDelta\t\t\tPrice\t\t\t\tBought\n---")
+		fmt.Println("---\nCoin\t\t\tDelta\t\t\tPrice\t\t\t\tAvg.Bought\n---")
 
 		for _, balance := range list.Coins {
 
@@ -39,10 +37,11 @@ var listCmd = &cobra.Command{
 				continue
 			}
 
-			lockedStr := ""
-			// if balance.Locked > 0 {
-			// 	lockedStr = fmt.Sprintf("\tLocked: %.8f", balance.Locked)
-			// }
+			lockedStr := "   "
+			if balance.Locked > 0 {
+				// lockedStr = fmt.Sprintf("\tLocked: %.8f", balance.Locked)
+				lockedStr = " * "
+			}
 
 			lastPriceStr := ""
 			lastPrice := balance.Price
@@ -55,7 +54,7 @@ var listCmd = &cobra.Command{
 			}
 
 			var lastTradedStr string
-			lastTraded := balance.LastTraded
+			lastTraded := balance.AvgTraded
 			if lastTraded > -1 {
 				lastTradedStr = fmt.Sprintf("\t\t%.8f (%.2f$)", lastTraded, balance.USDTradedValue)
 			} else {
@@ -76,5 +75,4 @@ var listCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(listCmd)
-	listCmd.Flags().StringVarP(&baseCoin, "exchange-coin", "c", "BTC", "Set one of the exchangeable coins")
 }
