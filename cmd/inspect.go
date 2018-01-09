@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"time"
 	"os"
 	"github.com/muka/btrader/service"
 	"github.com/spf13/cobra"
@@ -35,6 +36,21 @@ var inspectCmd = &cobra.Command{
 		fmt.Printf("Price: %.8f %s\t\tHigh: %.8f %s\t\tLow: %.8f %s\n", res.Change.LastPrice, baseCoin, res.Change.HighPrice, baseCoin,res.Change.LowPrice, baseCoin)
 		fmt.Printf("Volume: %.2f\n", res.Change.Volume)
 		fmt.Printf("Change: %.8f %s (%.2f%%)\n", res.Change.PriceChange, baseCoin, res.Change.PriceChangePercent)
+
+		fmt.Println("---\nTrades\n---")
+		for _, trade := range res.Info.Trades {
+
+			op := "SELL"
+			if trade.IsBuyer {
+				op = "BUY"
+			}
+
+			t := time.Unix(int64(trade.Time/1000), 0)
+			fmt.Printf("%s ", t.String())
+			fmt.Printf("%s\t%.2f\tat %.8f", op, trade.Quantity, trade.Price)
+			fmt.Printf("\t(Commission: %.8f %s)", trade.Commission, trade.CommissionAsset)
+			fmt.Println("")
+		}
 
 	},
 }

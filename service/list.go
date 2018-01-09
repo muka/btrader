@@ -125,7 +125,7 @@ func List(filter ListFilter) (*ListView, error) {
 			continue
 		}
 
-		trades, err := LastTrade(exchangeSymbol)
+		trades, err := LastTrades(exchangeSymbol)
 		if err != nil || len(trades) == 0 {
 			coinInfo.AvgTraded = -1
 			fmt.Printf("[%s] Error: %s\n", coinInfo.Asset, err.Error())
@@ -143,6 +143,7 @@ func List(filter ListFilter) (*ListView, error) {
 				coinInfo.AvgTraded = avgPrice / buyOp
 			}
 		}
+		coinInfo.Trades = trades
 
 		if balance.Asset == baseCoin {
 			continue

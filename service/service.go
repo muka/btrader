@@ -29,8 +29,8 @@ func LastPrice(symbol string) (float64, error) {
 	return res.Price, nil
 }
 
-//LastTrade return the last price bought
-func LastTrade(symbol string) ([]binance.Trade, error) {
+//LastTrades return the last price bought
+func LastTrades(symbol string) ([]binance.Trade, error) {
 	t := []binance.Trade{}
 	client := getClient()
 	res, err := client.GetTrades(symbol)
