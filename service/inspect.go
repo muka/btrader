@@ -22,7 +22,8 @@ func Inspect(baseCoin, symbol string) (*InspectView, error) {
 
 	view.Change = change
 
-	list, err := List(baseCoin, ListFilter{
+	list, err := List(ListFilter{
+		BaseCoin:      baseCoin,
 		Asset:         []string{symbol},
 		USDValueLimit: 0.001,
 	})

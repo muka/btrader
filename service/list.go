@@ -5,19 +5,7 @@ import (
 	"strings"
 
 	"github.com/pdepip/go-binance/binance"
-	"github.com/spf13/viper"
 )
-
-var bclient *binance.Binance
-
-func getClient() *binance.Binance {
-	if bclient == nil {
-		apiKey := viper.GetString("apiKey")
-		apiSecret := viper.GetString("apiSecret")
-		bclient = binance.New(apiKey, apiSecret)
-	}
-	return bclient
-}
 
 //ListView contains an overview of coin status
 type ListView struct {
@@ -46,15 +34,18 @@ type CoinInfo struct {
 
 //ListFilter filter for the list view
 type ListFilter struct {
+	BaseCoin      string
 	Asset         []string
 	USDValueLimit float64
 }
 
 //List account status
-func List(baseCoin string, filter ListFilter) (*ListView, error) {
+func List(filter ListFilter) (*ListView, error) {
+
+	baseCoin := filter.BaseCoin
 
 	if filter.USDValueLimit == 0 {
-		filter.USDValueLimit = .5
+		filter.USDValueLimit = 5
 	}
 
 	symbolFilter := make(map[string]bool)
@@ -141,12 +132,16 @@ func List(baseCoin string, filter ListFilter) (*ListView, error) {
 			continue
 		} else {
 			var avgPrice float64
+			var buyOp float64
 			for _, t := range trades {
 				if t.IsBuyer {
 					avgPrice += t.Price
+					buyOp++
 				}
 			}
-			coinInfo.AvgTraded = avgPrice / float64(len(trades))
+			if buyOp > 0 {
+				coinInfo.AvgTraded = avgPrice / buyOp
+			}
 		}
 
 		if balance.Asset == baseCoin {

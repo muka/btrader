@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 	"github.com/muka/btrader/service"
 	"github.com/spf13/cobra"
 )
@@ -13,7 +12,7 @@ func renderList(list *service.ListView) {
 	fmt.Println("---------------------------------------------------------------------------------------------------")
 	for _, balance := range list.Coins {
 
-		availStrf := "%.4f %s\t"
+		availStrf := "%.2f %s\t"
 		if balance.Free < 1 { //BTC
 			availStrf = "%.8f %s\t"
 		}
@@ -62,11 +61,11 @@ var listCmd = &cobra.Command{
 	Long: `list`,
 	Run: func(cmd *cobra.Command, args []string) {
 
-		list, err := service.List(baseCoin, service.ListFilter{Asset: args})
-		if err != nil {
-			fmt.Println(err.Error())
-			os.Exit(1)
-		}
+		list, err := service.List(service.ListFilter{
+			BaseCoin: baseCoin,
+			Asset: args,
+		})
+		fail(err)
 
 		fmt.Printf("\nLast %s price: %.8f\n\n", baseCoin, list.USDUnitValue)
 		renderList(list)

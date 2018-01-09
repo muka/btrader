@@ -2,7 +2,19 @@ package service
 
 import (
 	"github.com/pdepip/go-binance/binance"
+	"github.com/spf13/viper"
 )
+
+var bclient *binance.Binance
+
+func getClient() *binance.Binance {
+	if bclient == nil {
+		apiKey := viper.GetString("apiKey")
+		apiSecret := viper.GetString("apiSecret")
+		bclient = binance.New(apiKey, apiSecret)
+	}
+	return bclient
+}
 
 //LastPrice return the last price for a symbol
 func LastPrice(symbol string) (float64, error) {

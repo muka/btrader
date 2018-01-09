@@ -12,6 +12,13 @@ import (
 var cfgFile string
 var baseCoin string
 
+func fail(err error) {
+	if err != nil {
+		fmt.Printf("Error: %s\n", err.Error())
+		os.Exit(1)
+	}
+}
+
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "tmp",
