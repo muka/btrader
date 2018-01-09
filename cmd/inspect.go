@@ -37,7 +37,7 @@ var inspectCmd = &cobra.Command{
 		fmt.Printf("Volume: %.2f\n", res.Change.Volume)
 		fmt.Printf("Change: %.8f %s (%.2f%%)\n", res.Change.PriceChange, baseCoin, res.Change.PriceChangePercent)
 
-		fmt.Println("---\nTrades\n---")
+		fmt.Println("\n\nTrades\n---")
 		for _, trade := range res.Info.Trades {
 
 			op := "SELL"
